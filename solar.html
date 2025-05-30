@@ -1,0 +1,2186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="title">太阳系行星运动模拟</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(to bottom, #000428, #003973, #000428);
+            color: white;
+            font-family: 'Arial', sans-serif;
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 20px;
+            z-index: 10;
+            background: rgba(0, 10, 30, 0.7);
+            backdrop-filter: blur(5px);
+            border-bottom: 1px solid rgba(100, 180, 255, 0.3);
+            min-height: 120px;
+            position: relative;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 15px #00bfff, 0 0 25px #00ff8c;
+            letter-spacing: 2px;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: title-glow 3s infinite alternate;
+        }
+        
+        @keyframes title-glow {
+            from { text-shadow: 0 0 10px #00bfff, 0 0 20px #0080ff; }
+            to { text-shadow: 0 0 20px #00bfff, 0 0 30px #0080ff, 0 0 40px #0080ff; }
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #a0d2ff;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        /* 语言选择器样式 */
+        .language-selector-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+        
+        .language-selector-button {
+            background: rgba(0, 100, 180, 0.4);
+            border: 1px solid rgba(100, 180, 255, 0.5);
+            border-radius: 20px;
+            padding: 8px 15px;
+            color: #a0d2ff;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .language-selector-button:hover {
+            background: rgba(0, 120, 200, 0.6);
+        }
+        
+        .language-selector-button i {
+            font-size: 0.8rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .language-selector-button.active i {
+            transform: rotate(180deg);
+        }
+        
+        #language-selector {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: rgba(0, 30, 60, 0.95);
+            border-radius: 10px;
+            border: 1px solid rgba(100, 180, 255, 0.5);
+            margin-top: 5px;
+            padding: 10px 0;
+            display: none;
+            flex-direction: column;
+            min-width: 120px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            z-index: 101;
+        }
+        
+        .language-option {
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            color: #a0d2ff;
+        }
+        
+        .language-option:hover {
+            background: rgba(100, 180, 255, 0.2);
+        }
+        
+        .language-option.active {
+            background: rgba(100, 180, 255, 0.3);
+            font-weight: bold;
+            color: white;
+        }
+        
+        /* 显示语言选择器 - 移除悬停显示 */
+        #language-selector.show {
+            display: flex;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            min-height: 600px;
+            height: 80vh;
+            touch-action: none; /* 禁止默认触摸行为，允许自定义触摸处理 */
+        }
+        
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            position: absolute; /* 确保canvas不会覆盖其他元素 */
+            z-index: 1; /* 设置较低的z-index */
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+            flex-wrap: wrap;
+            background: rgba(0, 10, 30, 0.7);
+            backdrop-filter: blur(5px);
+            border-top: 1px solid rgba(100, 180, 255, 0.3);
+            z-index: 10;
+            min-height: 100px;
+        }
+        
+        button {
+            background: linear-gradient(to right, #4facfe, #00f2fe);
+            border: none;
+            border-radius: 50px;
+            color: #000;
+            padding: 12px 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 150, 255, 0.4);
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 200, 255, 0.6);
+        }
+        
+        button:active {
+            transform: translateY(1px);
+        }
+        
+        /* 图标按钮样式 */
+        .icon-button {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+        
+        .icon-button-container {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(0, 50, 100, 0.6);
+            padding: 10px 20px;
+            border-radius: 50px;
+        }
+        
+        .slider-container label {
+            font-size: 1rem;
+            color: #a0d2ff;
+        }
+        
+        input[type="range"] {
+            width: 200px;
+            height: 8px;
+            -webkit-appearance: none;
+            background: rgba(100, 180, 255, 0.3);
+            border-radius: 10px;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #00f2fe;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 200, 255, 0.8);
+        }
+        
+        .time-ratio-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(0, 50, 100, 0.6);
+            padding: 10px 20px;
+            border-radius: 50px;
+        }
+        
+        .time-ratio-container label {
+            font-size: 1rem;
+            color: #a0d2ff;
+        }
+        
+        .time-ratio-container input {
+            width: 60px;
+            padding: 5px 10px;
+            background: rgba(0, 30, 60, 0.8);
+            border: 1px solid rgba(100, 180, 255, 0.5);
+            border-radius: 5px;
+            color: white;
+            font-size: 1rem;
+            text-align: center;
+        }
+        
+        .time-ratio-container span {
+            color: #a0d2ff;
+            font-size: 1rem;
+        }
+        
+        .ratio-presets {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        
+        .preset-btn {
+            background: rgba(0, 100, 180, 0.4);
+            border: 1px solid rgba(100, 180, 255, 0.5);
+            border-radius: 20px;
+            padding: 5px 10px;
+            color: #a0d2ff;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .preset-btn:hover {
+            background: rgba(0, 120, 200, 0.6);
+        }
+        
+        .info-panel {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            background: rgba(0, 30, 60, 0.7);
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 300px;
+            text-align: left;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(100, 180, 255, 0.3);
+            z-index: 5;
+        }
+        
+        .info-panel h3 {
+            color: #00f2fe;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+        }
+        
+        .info-panel p {
+            color: #c0e4ff;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+        
+        .legend {
+            position: absolute;
+            top: 100px;
+            right: 30px;
+            background: rgba(0, 30, 60, 0.7);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(100, 180, 255, 0.3);
+            z-index: 10; /* 提高z-index */
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        .legend h3 {
+            color: #00f2fe;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 10px;
+            transition: background 0.3s, transform 0.2s;
+            position: relative;
+        }
+        
+        .legend-item:hover {
+            background: rgba(0, 100, 180, 0.3);
+            transform: translateX(5px);
+        }
+        
+        .color-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            transition: transform 0.2s;
+        }
+        
+        .legend-item:hover .color-box {
+            transform: scale(1.2);
+        }
+        
+        .instructions {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            background: rgba(0, 30, 60, 0.7);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(100, 180, 255, 0.3);
+            z-index: 5;
+        }
+        
+        .instructions h3 {
+            color: #00f2fe;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+        }
+        
+        .instructions p {
+            color: #c0e4ff;
+            line-height: 1.6;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+        }
+        
+        .desktop-controls {
+            display: block;
+        }
+        
+        .mobile-controls {
+            display: none;
+        }
+        
+        @media (max-width: 900px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .subtitle {
+                font-size: 1rem;
+            }
+            
+            .info-panel, .legend, .instructions, .planet-info-panel, .planet-tooltip {
+                position: relative;
+                top: auto;
+                bottom: auto;
+                left: auto;
+                right: auto;
+                margin: 20px auto;
+                max-width: 90%;
+                z-index: 50; /* 确保在移动视图中也能覆盖canvas */
+            }
+            
+            .canvas-container {
+                min-height: 400px;
+                height: 60vh;
+            }
+            
+            /* 在移动设备上隐藏操作指南和图例 */
+            .instructions, .legend {
+                display: none;
+            }
+            
+            /* 在移动设备上改变提示框行为 */
+            .planet-tooltip {
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                max-width: 80%;
+                pointer-events: auto; /* 允许触摸事件 */
+            }
+        }
+        
+        /* 额外section的样式 */
+        .extra-section {
+            padding: 80px 20px;
+            background: linear-gradient(to bottom, #001528, #000810);
+            border-top: 1px solid rgba(100, 180, 255, 0.3);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .extra-section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 40px;
+            text-align: center;
+            color: #00f2fe;
+            text-shadow: 0 0 10px rgba(0, 200, 255, 0.6);
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+        
+        .info-card {
+            background: rgba(0, 30, 60, 0.7);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(100, 180, 255, 0.3);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .info-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 150, 255, 0.2);
+        }
+        
+        .info-card h3 {
+            color: #00f2fe;
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+        }
+        
+        .info-card p {
+            color: #a0d2ff;
+            line-height: 1.6;
+            font-size: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .extra-section {
+                padding: 50px 20px;
+            }
+        }
+        
+        .planet-info-panel {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            background: rgba(0, 30, 60, 0.8);
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 350px;
+            text-align: left;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(100, 180, 255, 0.3);
+            z-index: 20;
+            max-height: 70vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+        
+        .planet-info-panel h3 {
+            color: #00f2fe;
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+            padding-right: 30px;
+        }
+        
+        .planet-info-panel .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(100, 180, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            color: #c0e4ff;
+            transition: all 0.2s;
+        }
+        
+        .planet-info-panel .close-btn:hover {
+            background: rgba(100, 180, 255, 0.6);
+        }
+        
+        .planet-tooltip {
+            position: absolute;
+            background: rgba(0, 30, 60, 0.9);
+            border-radius: 10px;
+            padding: 15px;
+            max-width: 300px;
+            text-align: left;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(100, 180, 255, 0.5);
+            z-index: 100;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.7);
+            pointer-events: none;
+            transition: opacity 0.2s;
+            font-size: 0.9rem;
+        }
+        
+        .planet-tooltip h3 {
+            color: #00f2fe;
+            margin-bottom: 8px;
+            font-size: 1.2rem;
+        }
+        
+        .planet-type {
+            display: inline-block;
+            background: rgba(0, 100, 180, 0.4);
+            padding: 4px 10px;
+            border-radius: 15px;
+            color: #a0d2ff;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        .planet-description {
+            color: #c0e4ff;
+            line-height: 1.6;
+            font-size: 1rem;
+            margin-bottom: 15px;
+        }
+        
+        .planet-details {
+            background: rgba(0, 20, 40, 0.5);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .planet-details p {
+            color: #a0d2ff;
+            margin: 6px 0;
+            font-size: 0.9rem;
+        }
+        
+        .planet-facts {
+            color: #c0e4ff;
+            line-height: 1.6;
+            font-size: 0.9rem;
+            font-style: italic;
+            background: rgba(0, 70, 150, 0.2);
+            padding: 10px;
+            border-radius: 10px;
+        }
+        
+        /* 点击效果样式 */
+        @keyframes click-pulse {
+            0% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+            100% { opacity: 0; transform: scale(1.5); }
+        }
+        
+        .click-effect {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            pointer-events: none;
+            animation: click-pulse 0.6s forwards;
+        }
+        
+        /* 移动端提示框关闭按钮 */
+        .planet-tooltip .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 24px;
+            height: 24px;
+            line-height: 24px;
+            text-align: center;
+            background: rgba(100, 180, 255, 0.3);
+            border-radius: 50%;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: none;
+        }
+        
+        @media (max-width: 900px) {
+            /* 显示关闭按钮 */
+            .planet-tooltip .close-btn {
+                display: block;
+            }
+            
+            /* 移动设备上tooltip的特殊样式 */
+            .planet-tooltip {
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                max-width: 90%;
+                width: 320px;
+                max-height: 60vh;
+                overflow-y: auto;
+                box-shadow: 0 5px 25px rgba(0, 0, 0, 0.8);
+                background: rgba(0, 30, 60, 0.95);
+                border: 1px solid rgba(100, 180, 255, 0.7);
+                padding: 15px 20px;
+                z-index: 1000;
+                pointer-events: auto;
+            }
+            
+            .planet-tooltip h3 {
+                padding-right: 30px;
+                font-size: 1.3rem;
+                margin-bottom: 12px;
+            }
+            
+            .planet-description {
+                font-size: 0.95rem;
+                line-height: 1.5;
+            }
+            
+            .click-effect {
+                z-index: 500;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="language-selector-container">
+            <div class="language-selector-button">
+                <span id="current-language">简体中文</span>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div id="language-selector">
+                <!-- 语言选项会通过JavaScript动态生成 -->
+            </div>
+        </div>
+        <h1 data-i18n="title">太阳系行星运动模拟</h1>
+        <p class="subtitle" data-i18n="subtitle">此模拟展示了太阳、八大行星和月球的公转轨道与自转动画。行星大小和距离未按真实比例显示，公转速度按真实比例</p>
+    </div>
+    
+    <div class="canvas-container">
+        <canvas id="solarSystem"></canvas>
+        
+        <div class="instructions">
+            <h3 data-i18n="guideTitle">操作指南</h3>
+            <div class="desktop-controls">
+                <p data-i18n="mouseDrag">鼠标拖动：旋转视角</p>
+                <p data-i18n="mouseWheel">鼠标滚轮：缩放场景</p>
+                <p data-i18n="rightDrag">右键拖动：平移视角</p>
+            </div>
+            <div class="mobile-controls">
+                <p data-i18n="touchDrag">单指拖动：旋转视角</p>
+                <p data-i18n="pinch">双指捏合：缩放场景</p>
+                <p data-i18n="tapLegend">点击图例：查看行星信息</p>
+            </div>
+        </div>
+        
+        <div class="instructions-toggle">
+            <i class="fas fa-info"></i>
+        </div>
+        
+        <div class="legend">
+            <h3 data-i18n="legendTitle">行星图例</h3>
+            <div class="legend-item" data-planet="sun">
+                <div class="color-box" style="background: #FFD700;"></div>
+                <span data-i18n="sun">太阳</span>
+            </div>
+            <div class="legend-item" data-planet="mercury">
+                <div class="color-box" style="background: #A9A9A9;"></div>
+                <span data-i18n="mercury">水星</span>
+            </div>
+            <div class="legend-item" data-planet="venus">
+                <div class="color-box" style="background: #E6BC6C;"></div>
+                <span data-i18n="venus">金星</span>
+            </div>
+            <div class="legend-item" data-planet="earth">
+                <div class="color-box" style="background: #1E90FF;"></div>
+                <span data-i18n="earth">地球</span>
+            </div>
+            <div class="legend-item" data-planet="mars">
+                <div class="color-box" style="background: #FF4500;"></div>
+                <span data-i18n="mars">火星</span>
+            </div>
+            <div class="legend-item" data-planet="jupiter">
+                <div class="color-box" style="background: #FF8C00;"></div>
+                <span data-i18n="jupiter">木星</span>
+            </div>
+            <div class="legend-item" data-planet="saturn">
+                <div class="color-box" style="background: #FFD700;"></div>
+                <span data-i18n="saturn">土星</span>
+            </div>
+            <div class="legend-item" data-planet="uranus">
+                <div class="color-box" style="background: #40E0D0;"></div>
+                <span data-i18n="uranus">天王星</span>
+            </div>
+            <div class="legend-item" data-planet="neptune">
+                <div class="color-box" style="background: #4169E1;"></div>
+                <span data-i18n="neptune">海王星</span>
+            </div>
+            <div class="legend-item" data-planet="moon">
+                <div class="color-box" style="background: #F0F8FF;"></div>
+                <span data-i18n="moon">月球</span>
+            </div>
+        </div>
+        
+        <div class="planet-tooltip" style="display: none;">
+            <div class="close-btn">×</div>
+            <h3 id="tooltip-title" data-i18n="tooltipTitle">行星信息</h3>
+            <div id="tooltip-content"></div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <div class="icon-button-container">
+            <button id="pauseBtn" class="icon-button" aria-label="暂停/继续"><i class="fas fa-pause"></i></button>
+            <button id="resetBtn" class="icon-button" aria-label="重置"><i class="fas fa-sync-alt"></i></button>
+        </div>
+        <div class="time-ratio-container">
+            <label for="daysInput" data-i18n="speedControl">模拟速度:</label>
+            <input type="number" id="daysInput" min="1" value="1">
+            <span data-i18n="days">天</span>
+            <span>:</span>
+            <input type="number" id="secondsInput" min="1" value="1">
+            <span data-i18n="seconds">秒</span>
+            <div class="ratio-presets">
+                <button class="preset-btn" data-days="1" data-seconds="1" data-i18n="preset1">1天:1秒</button>
+                <button class="preset-btn" data-days="7" data-seconds="1" data-i18n="preset2">1周:1秒</button>
+                <button class="preset-btn" data-days="30" data-seconds="1" data-i18n="preset3">1月:1秒</button>
+                <button class="preset-btn" data-days="365" data-seconds="1" data-i18n="preset4">1年:1秒</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 先加载语言脚本 -->
+    <script src="languages.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取DOM元素
+            const canvas = document.getElementById('solarSystem');
+            const ctx = canvas.getContext('2d');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const instructions = document.querySelector('.instructions');
+            const instructionsToggle = document.querySelector('.instructions-toggle');
+            const currentLanguageDisplay = document.getElementById('current-language');
+            
+            // 添加语言选择器按钮点击事件
+            const languageSelectorButton = document.querySelector('.language-selector-button');
+            const languageSelector = document.getElementById('language-selector');
+            
+            if (languageSelectorButton && languageSelector) {
+                languageSelectorButton.addEventListener('click', function() {
+                    // 切换显示/隐藏语言选择器
+                    languageSelector.classList.toggle('show');
+                    // 切换按钮活动状态
+                    this.classList.toggle('active');
+                });
+                
+                // 点击其他地方时隐藏语言选择器
+                document.addEventListener('click', function(e) {
+                    if (!languageSelectorButton.contains(e.target) && !languageSelector.contains(e.target)) {
+                        languageSelector.classList.remove('show');
+                        languageSelectorButton.classList.remove('active');
+                    }
+                });
+            }
+            
+            // 更新当前显示的语言名称
+            function updateCurrentLanguageDisplay() {
+                if (currentLanguageDisplay) {
+                    currentLanguageDisplay.textContent = LANGUAGES[currentLanguage].name;
+                }
+            }
+            
+            // 在语言变化时更新显示
+            document.addEventListener('languageChanged', function(e) {
+                updateCurrentLanguageDisplay();
+                
+                // 更新pause按钮的aria-label
+                if (pauseBtn) {
+                    pauseBtn.setAttribute('aria-label', paused ? getText('resume') : getText('pause'));
+                }
+                
+                // 更新reset按钮的aria-label
+                if (resetBtn) {
+                    resetBtn.setAttribute('aria-label', getText('reset'));
+                }
+            });
+            
+            // 初始化语言显示
+            updateCurrentLanguageDisplay();
+            
+            // 初始化按钮标签
+            pauseBtn.setAttribute('aria-label', getText('pause'));
+            resetBtn.setAttribute('aria-label', getText('reset'));
+            
+            // 行星提示框元素
+            const planetTooltip = document.querySelector('.planet-tooltip');
+            const tooltipTitle = document.getElementById('tooltip-title');
+            const tooltipContent = document.getElementById('tooltip-content');
+            const closeBtn = document.querySelector('.planet-tooltip .close-btn');
+            
+            // 添加关闭按钮事件
+            closeBtn.addEventListener('click', function() {
+                hideTooltip();
+            });
+            
+
+            
+            // 确保planetData已初始化
+            if (typeof window.planetData === 'undefined') {
+                window.planetData = {}; 
+            }
+            
+            // 初始更新行星数据
+            updatePlanetData();
+            
+            // 显示提示框函数
+            function showTooltip(planetId, event) {
+                const planet = planetData[planetId];
+                if (!planet) return;
+                
+                // 处理数据，同时支持函数和直接值
+                const getValue = (prop) => {
+                    if (typeof prop === 'function') {
+                        return prop();
+                    }
+                    return prop;
+                };
+                
+                // 设置标题
+                const planetName = getValue(planet.name) || planetId;
+                tooltipTitle.textContent = planetName + " (" + planet.englishName + ")";
+                
+                // 生成内容HTML
+                const planetType = getValue(planet.type) || '';
+                const planetDesc = getValue(planet.description) || '';
+                
+                let html = '<div class="planet-type">' + planetType + '</div>';
+                html += '<p class="planet-description">' + planetDesc + '</p>';
+                html += '<div class="planet-details">';
+                
+                // 添加主要详细信息（使用多语言标签）
+                const diameterLabel = getText('diameterLabel');
+                const temperatureLabel = getText('temperatureLabel');
+                const orbitLabel = getText('orbitLabel');
+                const rotationLabel = getText('rotationLabel');
+                const moonsLabel = getText('moonsLabel');
+                const factsLabel = getText('factsLabel');
+                
+                if(planet.diameter) html += '<p><strong>' + diameterLabel + ':</strong> ' + getValue(planet.diameter) + '</p>';
+                if(planet.temperature) html += '<p><strong>' + temperatureLabel + ':</strong> ' + getValue(planet.temperature) + '</p>';
+                if(planet.orbit) html += '<p><strong>' + orbitLabel + ':</strong> ' + getValue(planet.orbit) + '</p>';
+                if(planet.rotation) html += '<p><strong>' + rotationLabel + ':</strong> ' + getValue(planet.rotation) + '</p>';
+                if(planet.moons) html += '<p><strong>' + moonsLabel + ':</strong> ' + getValue(planet.moons) + '</p>';
+                
+                html += '</div>';
+                
+                // 添加趣闻
+                const facts = getValue(planet.facts) || '';
+                html += '<div class="planet-facts"><strong>' + factsLabel + ':</strong> ' + facts + '</div>';
+                
+                // 更新内容
+                tooltipContent.innerHTML = html;
+                
+                // 显示提示框并定位
+                planetTooltip.style.display = 'block';
+                
+                // 确保关闭按钮在移动设备上可见
+                if (isMobile) {
+                    closeBtn.style.display = 'block';
+                }
+                
+                // 如果有事件对象，用于定位
+                if (event) {
+                    positionTooltip(event);
+                } else {
+                    // 无事件对象时使用默认位置（移动设备）
+                    planetTooltip.style.left = '50%';
+                    planetTooltip.style.top = 'auto';
+                    planetTooltip.style.bottom = '20px';
+                    planetTooltip.style.transform = 'translateX(-50%)';
+                }
+            }
+            
+            // 移动设备检测
+            function detectMobile() {
+                return window.innerWidth <= 900 || 
+                       navigator.userAgent.match(/Android/i) || 
+                       navigator.userAgent.match(/iPhone|iPad|iPod/i);
+            }
+            
+            // 初始检测
+            let isMobile = detectMobile();
+            
+            // 窗口大小改变时重新检测
+            window.addEventListener('resize', function() {
+                isMobile = detectMobile();
+                
+                // 根据设备类型更新界面
+                updateInterfaceForDeviceType();
+            });
+            
+            // 根据设备类型更新界面
+            function updateInterfaceForDeviceType() {
+                // 如果是移动设备
+                if (isMobile) {
+                    // 隐藏指南和图例
+                    if (instructions) {
+                        instructions.style.display = 'none';
+                    }
+                    
+                    const legend = document.querySelector('.legend');
+                    if (legend) {
+                        legend.style.display = 'none';
+                    }
+                } else {
+                    // 桌面设备，显示指南和图例
+                    if (instructions) {
+                        instructions.style.display = 'block';
+                    }
+                    
+                    const legend = document.querySelector('.legend');
+                    if (legend) {
+                        legend.style.display = 'block';
+                    }
+                }
+            }
+            
+            // 初始化时更新界面
+            updateInterfaceForDeviceType();
+            
+            // 存储点击的坐标和可能被点击的天体
+            let clickedX = 0;
+            let clickedY = 0;
+            let potentialClickTarget = null;
+            
+            // 创建点击效果
+            function createClickEffect(x, y, size) {
+                const effect = document.createElement('div');
+                effect.className = 'click-effect';
+                effect.style.left = (x - size/2) + 'px';
+                effect.style.top = (y - size/2) + 'px';
+                effect.style.width = size + 'px';
+                effect.style.height = size + 'px';
+                
+                document.querySelector('.canvas-container').appendChild(effect);
+                
+                // 动画结束后移除元素
+                setTimeout(() => {
+                    effect.remove();
+                }, 600);
+            }
+            
+            // 隐藏提示框函数
+            function hideTooltip() {
+                planetTooltip.style.display = 'none';
+            }
+            
+            // 定位提示框函数
+            function positionTooltip(event) {
+                const canvasRect = canvas.getBoundingClientRect();
+                const x = event.clientX - canvasRect.left;
+                const y = event.clientY - canvasRect.top;
+                
+                // 获取tooltip尺寸
+                const tooltipWidth = planetTooltip.offsetWidth;
+                const tooltipHeight = planetTooltip.offsetHeight;
+                
+                if (isMobile) {
+                    // 在移动设备上，将提示框显示在固定位置
+                    planetTooltip.style.left = '50%';
+                    planetTooltip.style.top = 'auto';
+                    planetTooltip.style.bottom = '20px';
+                    planetTooltip.style.transform = 'translateX(-50%)';
+                    return;
+                }
+                
+                // 桌面端的tooltip定位逻辑
+                // 防止tooltip超出画布边界
+                let posX = x + 15;
+                let posY = y - tooltipHeight / 2;
+                
+                // 右侧边界检查
+                if (posX + tooltipWidth > canvas.width) {
+                    posX = x - tooltipWidth - 15;
+                }
+                
+                // 上下边界检查
+                if (posY < 0) {
+                    posY = 0;
+                } else if (posY + tooltipHeight > canvas.height) {
+                    posY = canvas.height - tooltipHeight;
+                }
+                
+                // 重置transform，使用absolute定位
+                planetTooltip.style.transform = 'none';
+                planetTooltip.style.left = posX + 'px';
+                planetTooltip.style.top = posY + 'px';
+                planetTooltip.style.bottom = 'auto';
+            }
+            
+            // 画布点击事件 - 点击星球
+            canvas.addEventListener('click', function(e) {
+                const rect = canvas.getBoundingClientRect();
+                clickedX = e.clientX - rect.left;
+                clickedY = e.clientY - rect.top;
+                
+                // 如果当前有显示的提示框，先隐藏
+                if (planetTooltip.style.display === 'block') {
+                    hideTooltip();
+                    return;
+                }
+                
+                // 检查是否点击到了行星
+                checkPlanetClick();
+            });
+            
+            // 添加触摸事件支持 - 确保移动设备上的点击功能
+            canvas.addEventListener('touchend', function(e) {
+                // 防止默认行为，但仅针对这个事件
+                e.preventDefault();
+                
+                if (e.changedTouches.length > 0) {
+                    const touch = e.changedTouches[0];
+                    const rect = canvas.getBoundingClientRect();
+                    clickedX = touch.clientX - rect.left;
+                    clickedY = touch.clientY - rect.top;
+                    
+                    // 如果当前有显示的提示框，先隐藏
+                    if (planetTooltip.style.display === 'block') {
+                        hideTooltip();
+                        return;
+                    }
+                    
+                    // 检查是否点击到了行星
+                    checkPlanetClick();
+                }
+            });
+            
+            // 检查是否点击到行星
+            function checkPlanetClick() {
+                // 检查太阳
+                const sunRotated = rotateY(sun.x, sun.y, sun.z, rotationY);
+                const sunRotated2 = rotateX(sunRotated.x, sunRotated.y, sunRotated.z, rotationX);
+                const sunProjected = project(sunRotated2.x, sunRotated2.y, sunRotated2.z);
+                
+                const sunRadius = sun.radius * sunProjected.scale;
+                const sunDist = Math.hypot(clickedX - sunProjected.x, clickedY - sunProjected.y);
+                
+                if (sunDist <= sunRadius) {
+                    // 创建点击效果
+                    createClickEffect(clickedX, clickedY, sunRadius * 2);
+                    
+                    // 显示太阳信息
+                    showTooltip('sun', { clientX: clickedX, clientY: clickedY });
+                    return;
+                }
+                
+                // 检查行星
+                for (let i = 0; i < planets.length; i++) {
+                    const planet = planets[i];
+                    
+                    // 计算行星位置
+                    const planetX = planet.distance * Math.cos(planet.angle);
+                    const planetZ = planet.distance * Math.sin(planet.angle);
+                    
+                    // 应用3D旋转
+                    let rotated = rotateY(planetX, planet.y, planetZ, rotationY);
+                    rotated = rotateX(rotated.x, rotated.y, rotated.z, rotationX);
+                    const projected = project(rotated.x, rotated.y, rotated.z);
+                    
+                    // 检查投影是否有效
+                    if (!isFinite(projected.x) || !isFinite(projected.y) || !isFinite(projected.scale)) {
+                        continue;
+                    }
+                    
+                    const planetRadius = planet.radius * projected.scale;
+                    const dist = Math.hypot(clickedX - projected.x, clickedY - projected.y);
+                    
+                    if (dist <= planetRadius) {
+                        // 创建点击效果
+                        createClickEffect(clickedX, clickedY, planetRadius * 2);
+                        
+                        // 显示行星信息
+                        const planetId = ['mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune'][i];
+                        showTooltip(planetId, { clientX: clickedX, clientY: clickedY });
+                        
+                        // 如果是地球，检查是否点击了月球
+                        if (i === 2 && planet.moons && planet.moons.length > 0) {
+                            // 我们已经点击了地球，不需要再检查月球
+                            return;
+                        }
+                        
+                        return;
+                    }
+                    
+                    // 如果是地球，检查月球
+                    if (i === 2 && planet.moons && planet.moons.length > 0) {
+                        const moon = planet.moons[0];
+                        
+                        // 计算月球位置（相对于行星）
+                        const moonX = planetX + moon.distance * Math.cos(moon.angle);
+                        const moonZ = planetZ + moon.distance * Math.sin(moon.angle);
+                        const moonY = planet.y;
+                        
+                        // 应用3D旋转
+                        let moonRotated = rotateY(moonX, moonY, moonZ, rotationY);
+                        moonRotated = rotateX(moonRotated.x, moonRotated.y, moonRotated.z, rotationX);
+                        const moonProjected = project(moonRotated.x, moonRotated.y, moonRotated.z);
+                        
+                        // 检查投影是否有效
+                        if (!isFinite(moonProjected.x) || !isFinite(moonProjected.y) || !isFinite(moonProjected.scale)) {
+                            continue;
+                        }
+                        
+                        const moonRadius = moon.radius * moonProjected.scale;
+                        const moonDist = Math.hypot(clickedX - moonProjected.x, clickedY - moonProjected.y);
+                        
+                        if (moonDist <= moonRadius) {
+                            // 创建点击效果
+                            createClickEffect(clickedX, clickedY, moonRadius * 2);
+                            
+                            // 显示月球信息
+                            showTooltip('moon', { clientX: clickedX, clientY: clickedY });
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            // 添加行星图例悬停事件
+            const legendItems = document.querySelectorAll('.legend-item');
+            legendItems.forEach(item => {
+                item.addEventListener('mouseenter', function(e) {
+                    const planetId = this.getAttribute('data-planet');
+                    if(planetId && planetData[planetId]) {
+                        showTooltip(planetId, e);
+                    }
+                });
+                
+                item.addEventListener('mouseleave', function() {
+                    hideTooltip();
+                });
+                
+                item.addEventListener('mousemove', function(e) {
+                    // 更新提示框位置
+                    if(planetTooltip.style.display === 'block') {
+                        positionTooltip(e);
+                    }
+                });
+                
+                // 为移动设备添加点击事件
+                item.addEventListener('click', function(e) {
+                    const planetId = this.getAttribute('data-planet');
+                    if(planetId && planetData[planetId]) {
+                        // 如果已经显示且是同一个行星，则隐藏
+                        if(planetTooltip.style.display === 'block' && 
+                           tooltipTitle.textContent.includes(planetData[planetId].name)) {
+                            hideTooltip();
+                        } else {
+                            showTooltip(planetId, e);
+                        }
+                    }
+                });
+            });
+            
+            // 添加tooltip点击关闭事件（主要用于移动设备）
+            planetTooltip.addEventListener('click', function(e) {
+                // 如果点击的是关闭按钮，不进行处理（已有单独的事件处理器）
+                if (e.target === closeBtn || closeBtn.contains(e.target)) {
+                    return;
+                }
+                
+                // 检测是否点击的是关闭按钮区域（移动设备上的右上角）
+                const rect = planetTooltip.getBoundingClientRect();
+                const isCloseButtonArea = 
+                    e.clientX > rect.right - 30 && 
+                    e.clientX < rect.right && 
+                    e.clientY > rect.top && 
+                    e.clientY < rect.top + 30;
+                
+                if(isCloseButtonArea || window.innerWidth <= 900) {
+                    hideTooltip();
+                }
+            });
+            
+            
+            // 3D投影参数
+            let centerX = canvas.width / 2;
+            let centerY = canvas.height / 2;
+            let rotationX = Math.PI / 6;
+            let rotationY = 0;
+            let zoom = 0.8;
+            
+            // 鼠标控制变量
+            let isDragging = false;
+            let lastMouseX = 0;
+            let lastMouseY = 0;
+            let dragStartX = 0;
+            let dragStartY = 0;
+            
+            // 动画状态
+            let paused = false;
+            let speed = 1;
+            let animationTime = 0; // 跟踪动画运行时间
+            const RESET_INTERVAL = 300000; // 5分钟重置一次行星状态，防止长时间运行出错
+            
+            // 地球公转一周的天数
+            const EARTH_ORBIT_DAYS = 365.25;
+            let daysPerSecond = 1; // 默认1天/秒
+            
+            // 帧率相关变量
+            let frameCount = 0;
+            let lastFPSTime = 0;
+            let fps = 60; // 默认值，会通过测量更新
+            let fpsUpdateInterval = 1000; // 每秒更新一次帧率
+            
+            // 时间比例控制元素
+            const daysInput = document.getElementById('daysInput');
+            const secondsInput = document.getElementById('secondsInput');
+            const presetButtons = document.querySelectorAll('.preset-btn');
+            
+            // 创建星星背景
+            const stars = [];
+            
+            // 行星数据（公转周期相对于地球）
+            const sun = {
+                x: 0,
+                y: 0,
+                z: 0,
+                radius: 40,
+                color: '#FFD700',
+                rotation: 0,
+                rotationSpeed: 0.002
+            };
+            
+            const planets = [
+                { // 水星
+                    name: '水星',
+                    color: '#A9A9A9',
+                    radius: 8,
+                    distance: 80,
+                    orbitSpeed: 0.01 * 365.25 / 87.9, // 真实公转速度比例
+                    angle: Math.random() * Math.PI * 2,
+                    y: 0,
+                    rotation: 0,
+                    rotationSpeed: 0.006,
+                    hasRing: false
+                },
+                { // 金星
+                    name: '金星',
+                    color: '#E6BC6C',
+                    radius: 12,
+                    distance: 120,
+                    orbitSpeed: 0.01 * 365.25 / 224.7, // 真实公转速度比例
+                    angle: Math.random() * Math.PI * 2,
+                    y: 0,
+                    rotation: 0,
+                    rotationSpeed: 0.002,
+                    hasRing: false
+                },
+                { // 地球
+                    name: '地球',
+                    color: '#1E90FF',
+                    radius: 14,
+                    distance: 170,
+                    orbitSpeed: 0.01, // 基准速度
+                    angle: Math.random() * Math.PI * 2,
+                    y: 0,
+                    rotation: 0,
+                    rotationSpeed: 0.01,
+                    hasRing: false,
+                    moons: [
+                        {
+                            name: '月球',
+                            color: '#F0F8FF',
+                            radius: 4,
+                            distance: 25,
+                            orbitSpeed: 0.01 * 365.25 / 27.3, // 真实公转速度比例
+                            angle: Math.random() * Math.PI * 2,
+                            rotation: 0
+                        }
+                    ]
+                },
+                { // 火星
+                    name: '火星',
+                    color: '#FF4500',
+                    radius: 10,
+                    distance: 220,
+                    orbitSpeed: 0.01 * 365.25 / 687, // 真实公转速度比例
+                    angle: Math.random() * Math.PI * 2,
+                    y: 0,
+                    rotation: 0,
+                    rotationSpeed: 0.008,
+                    hasRing: false
+                },
+                { // 木星
+                    name: '木星',
+                    color: '#FF8C00',
+                    radius: 28,
+                    distance: 290,
+                    orbitSpeed: 0.01 * 365.25 / 4332, // 真实公转速度比例
+                    angle: Math.random() * Math.PI * 2,
+                    y: 0,
+                    rotation: 0,
+                    rotationSpeed: 0.02,
+                    hasRing: false
+                },
+                { // 土星
+                    name: '土星',
+                    color: '#FFD700',
+                    radius: 24,
+                    distance: 380,
+                    orbitSpeed: 0.01 * 365.25 / 10759, // 真实公转速度比例
+                    angle: Math.random() * Math.PI * 2,
+                    y: 0,
+                    rotation: 0,
+                    rotationSpeed: 0.015,
+                    hasRing: true,
+                    ringRadius: 40,
+                    ringWidth: 8
+                },
+                { // 天王星
+                    name: '天王星',
+                    color: '#40E0D0',
+                    radius: 18,
+                    distance: 460,
+                    orbitSpeed: 0.01 * 365.25 / 30685, // 真实公转速度比例
+                    angle: Math.random() * Math.PI * 2,
+                    y: 0,
+                    rotation: 0,
+                    rotationSpeed: 0.01,
+                    hasRing: false
+                },
+                { // 海王星
+                    name: '海王星',
+                    color: '#4169E1',
+                    radius: 18,
+                    distance: 540,
+                    orbitSpeed: 0.01 * 365.25 / 60189, // 真实公转速度比例
+                    angle: Math.random() * Math.PI * 2,
+                    y: 0,
+                    rotation: 0,
+                    rotationSpeed: 0.009,
+                    hasRing: false
+                }
+            ];
+            
+            // 函数定义
+            function createStars() {
+                stars.length = 0; // 清空数组
+                for (let i = 0; i < 1000; i++) {
+                    stars.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
+                        size: Math.random() * 2 + 0.5,
+                        opacity: Math.random() * 0.8 + 0.2,
+                        speed: Math.random() * 0.05 + 0.01,
+                        twinkle: Math.random() > 0.7
+                    });
+                }
+            }
+            
+            function drawStars() {
+                stars.forEach(star => {
+                    if (star.twinkle) {
+                        star.opacity += star.speed;
+                        if (star.opacity > 1 || star.opacity < 0.2) {
+                            star.speed *= -1;
+                        }
+                    }
+                    
+                    ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+                    ctx.beginPath();
+                    ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+            
+            function resizeCanvas() {
+                const canvasContainer = document.querySelector('.canvas-container');
+                canvas.width = canvasContainer.clientWidth;
+                canvas.height = canvasContainer.clientHeight;
+                
+                // 更新中心点坐标
+                centerX = canvas.width / 2;
+                centerY = canvas.height / 2;
+                // 重新创建星星
+                createStars();
+                
+                // 强制重新绘制
+                draw();
+            }
+            
+            // 3D投影函数
+            function project(x, y, z) {
+                // 防止除以零错误
+                let divisor = 1000 + z;
+                if (Math.abs(divisor) < 0.001) {
+                    divisor = z > 0 ? 1000.001 : 999.999;
+                }
+                
+                // 确保所有计算使用有限值
+                x = isFinite(x) ? x : 0;
+                y = isFinite(y) ? y : 0;
+                z = isFinite(z) ? z : 0;
+                
+                // 计算缩放比例，防止极端值
+                let scale = zoom * 1000 / divisor;
+                
+                // 限制缩放比例在合理范围内
+                if (!isFinite(scale) || Math.abs(scale) > 100) {
+                    scale = scale > 0 ? 2 : -2; // 使用安全的默认值
+                }
+                
+                // 计算投影后的坐标
+                const projectedX = centerX + x * scale;
+                const projectedY = centerY + y * scale;
+                
+                return { 
+                    x: isFinite(projectedX) ? projectedX : centerX, 
+                    y: isFinite(projectedY) ? projectedY : centerY, 
+                    scale: isFinite(scale) ? scale : 1 
+                };
+            }
+            
+            // 旋转函数
+            function rotateX(x, y, z, angle) {
+                // 确保所有参数为有限值
+                x = isFinite(x) ? x : 0;
+                y = isFinite(y) ? y : 0;
+                z = isFinite(z) ? z : 0;
+                angle = isFinite(angle) ? angle : 0;
+                
+                const cosA = Math.cos(angle);
+                const sinA = Math.sin(angle);
+                const newY = y * cosA - z * sinA;
+                const newZ = y * sinA + z * cosA;
+                
+                return { 
+                    x, 
+                    y: isFinite(newY) ? newY : 0,
+                    z: isFinite(newZ) ? newZ : 0
+                };
+            }
+            
+            function rotateY(x, y, z, angle) {
+                // 确保所有参数为有限值
+                x = isFinite(x) ? x : 0;
+                y = isFinite(y) ? y : 0;
+                z = isFinite(z) ? z : 0;
+                angle = isFinite(angle) ? angle : 0;
+                
+                const cosA = Math.cos(angle);
+                const sinA = Math.sin(angle);
+                const newX = x * cosA - z * sinA;
+                const newZ = x * sinA + z * cosA;
+                
+                return { 
+                    x: isFinite(newX) ? newX : 0, 
+                    y, 
+                    z: isFinite(newZ) ? newZ : 0
+                };
+            }
+            
+            function rotateZ(x, y, z, angle) {
+                // 确保所有参数为有限值
+                x = isFinite(x) ? x : 0;
+                y = isFinite(y) ? y : 0;
+                z = isFinite(z) ? z : 0;
+                angle = isFinite(angle) ? angle : 0;
+                
+                const cosA = Math.cos(angle);
+                const sinA = Math.sin(angle);
+                const newX = x * cosA - y * sinA;
+                const newY = x * sinA + y * cosA;
+                
+                return { 
+                    x: isFinite(newX) ? newX : 0, 
+                    y: isFinite(newY) ? newY : 0, 
+                    z
+                };
+            }
+            
+            // 绘制太阳
+            function drawSun() {
+                const rotated = rotateY(sun.x, sun.y, sun.z, rotationY);
+                const rotated2 = rotateX(rotated.x, rotated.y, rotated.z, rotationX);
+                const projected = project(rotated2.x, rotated2.y, rotated2.z);
+                
+                // 太阳光晕
+                try {
+                    // 检查所有参数是否为有限值
+                    if (isFinite(projected.x) && isFinite(projected.y) && 
+                        isFinite(sun.radius * 2.5 * projected.scale)) {
+                const gradient = ctx.createRadialGradient(
+                    projected.x, projected.y, 0,
+                    projected.x, projected.y, sun.radius * 2.5 * projected.scale
+                );
+                gradient.addColorStop(0, 'rgba(255, 215, 0, 1)');
+                gradient.addColorStop(0.7, 'rgba(255, 140, 0, 0.6)');
+                gradient.addColorStop(1, 'rgba(255, 69, 0, 0)');
+                
+                ctx.beginPath();
+                ctx.arc(projected.x, projected.y, sun.radius * 2.5 * projected.scale, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                    } else {
+                        // 回退到简单填充
+                        ctx.beginPath();
+                        ctx.arc(projected.x, projected.y, sun.radius * projected.scale, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(255, 215, 0, 0.8)';
+                        ctx.fill();
+                    }
+                } catch (e) {
+                    console.warn('太阳光晕渐变错误:', e);
+                    // 回退方案
+                    ctx.beginPath();
+                    ctx.arc(projected.x, projected.y, sun.radius * projected.scale, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255, 215, 0, 0.8)';
+                    ctx.fill();
+                }
+                
+                // 太阳本体
+                ctx.beginPath();
+                ctx.arc(projected.x, projected.y, sun.radius * projected.scale, 0, Math.PI * 2);
+                ctx.fillStyle = sun.color;
+                ctx.fill();
+                
+                // 太阳表面纹理
+                try {
+                    if (isFinite(projected.x) && isFinite(projected.y) && 
+                        isFinite(sun.radius * 0.9 * projected.scale) && 
+                        isFinite(2 * projected.scale)) {
+                ctx.strokeStyle = 'rgba(255, 100, 0, 0.6)';
+                ctx.lineWidth = 2 * projected.scale;
+                ctx.beginPath();
+                ctx.arc(projected.x, projected.y, sun.radius * 0.9 * projected.scale, 0, Math.PI * 2);
+                ctx.stroke();
+                    }
+                } catch (e) {
+                    console.warn('太阳表面纹理错误:', e);
+                }
+                
+                // 太阳名称
+                try {
+                    if (isFinite(projected.x) && isFinite(projected.y) && 
+                        isFinite(16 * projected.scale) &&
+                        isFinite((sun.radius + 15) * projected.scale)) {
+                ctx.font = `${16 * projected.scale}px Arial`;
+                ctx.fillStyle = '#FFD700';
+                ctx.textAlign = 'center';
+                ctx.fillText(getText('sun'), projected.x, projected.y - (sun.radius + 15) * projected.scale);
+                    }
+                } catch (e) {
+                    console.warn('太阳名称绘制错误:', e);
+                }
+            }
+            
+            // 绘制行星
+            function drawPlanet(planet) {
+                // 确保角度在有效范围内（预防措施）
+                planet.angle = planet.angle % (2 * Math.PI);
+                
+                // 计算行星位置
+                const planetX = planet.distance * Math.cos(planet.angle);
+                const planetZ = planet.distance * Math.sin(planet.angle);
+                
+                // 应用3D旋转
+                let rotated = rotateY(planetX, planet.y, planetZ, rotationY);
+                rotated = rotateX(rotated.x, rotated.y, rotated.z, rotationX);
+                const projected = project(rotated.x, rotated.y, rotated.z);
+                
+                // 检查投影是否有效
+                if (!isFinite(projected.x) || !isFinite(projected.y) || !isFinite(projected.scale)) {
+                    return; // 跳过这一帧的绘制
+                }
+                
+                // 绘制轨道
+                ctx.beginPath();
+                ctx.strokeStyle = 'rgba(100, 150, 255, 0.1)';
+                ctx.lineWidth = 1;
+                
+                for (let i = 0; i <= 100; i++) {
+                    const angle = (i / 100) * Math.PI * 2;
+                    const x = planet.distance * Math.cos(angle);
+                    const z = planet.distance * Math.sin(angle);
+                    
+                    let orbitRotated = rotateY(x, 0, z, rotationY);
+                    orbitRotated = rotateX(orbitRotated.x, orbitRotated.y, orbitRotated.z, rotationX);
+                    const orbitProjected = project(orbitRotated.x, orbitRotated.y, orbitRotated.z);
+                    
+                    if (i === 0) {
+                        ctx.moveTo(orbitProjected.x, orbitProjected.y);
+                    } else {
+                        ctx.lineTo(orbitProjected.x, orbitProjected.y);
+                    }
+                }
+                ctx.stroke();
+                
+                // 绘制行星本体
+                ctx.beginPath();
+                ctx.arc(projected.x, projected.y, planet.radius * projected.scale, 0, Math.PI * 2);
+                
+                // 行星渐变效果 - 添加安全检查防止NaN或Infinity
+                try {
+                    // 确保所有参数都是有限数值
+                    const gradientX1 = isFinite(projected.x - planet.radius/3 * projected.scale) ? 
+                        projected.x - planet.radius/3 * projected.scale : projected.x;
+                    const gradientY1 = isFinite(projected.y - planet.radius/3 * projected.scale) ? 
+                        projected.y - planet.radius/3 * projected.scale : projected.y;
+                    const gradientR1 = isFinite(1 * projected.scale) ? 
+                        1 * projected.scale : 1;
+                    const gradientX2 = isFinite(projected.x) ? projected.x : 0;
+                    const gradientY2 = isFinite(projected.y) ? projected.y : 0;
+                    const gradientR2 = isFinite(planet.radius * projected.scale) ? 
+                        planet.radius * projected.scale : planet.radius;
+                    
+                    // 只有在所有参数有效时才创建渐变
+                    if (isFinite(gradientX1) && isFinite(gradientY1) && isFinite(gradientR1) &&
+                        isFinite(gradientX2) && isFinite(gradientY2) && isFinite(gradientR2)) {
+                const gradient = ctx.createRadialGradient(
+                            gradientX1, gradientY1, gradientR1,
+                            gradientX2, gradientY2, gradientR2
+                );
+                gradient.addColorStop(0, planet.color);
+                gradient.addColorStop(1, darkenColor(planet.color, 30));
+                ctx.fillStyle = gradient;
+                    } else {
+                        // 如果有无效参数，使用纯色填充
+                        ctx.fillStyle = planet.color;
+                    }
+                } catch (e) {
+                    // 如果创建渐变出错，回退到纯色
+                    console.warn('渐变创建错误:', e);
+                    ctx.fillStyle = planet.color;
+                }
+                
+                ctx.fill();
+                
+                // 绘制行星环（土星）
+                if (planet.hasRing) {
+                    try {
+                    ctx.save();
+                    ctx.translate(projected.x, projected.y);
+                    ctx.rotate(planet.rotation * 2);
+                    
+                    ctx.beginPath();
+                        // 确保椭圆参数有效
+                        const ringRadiusX = isFinite(planet.ringRadius * projected.scale) ? 
+                            planet.ringRadius * projected.scale : planet.ringRadius;
+                        const ringRadiusY = isFinite(planet.ringWidth * projected.scale) ? 
+                            planet.ringWidth * projected.scale : planet.ringWidth;
+                            
+                        if (isFinite(ringRadiusX) && isFinite(ringRadiusY)) {
+                    ctx.ellipse(
+                        0, 0, 
+                                ringRadiusX, ringRadiusY, 
+                        0, 0, Math.PI * 2
+                    );
+                    ctx.strokeStyle = 'rgba(210, 180, 140, 0.8)';
+                    ctx.lineWidth = 3 * projected.scale;
+                    ctx.stroke();
+                        }
+                    
+                    ctx.restore();
+                    } catch (e) {
+                        console.warn('行星环绘制错误:', e);
+                    }
+                }
+                
+                // 绘制行星名称
+                ctx.font = `${12 * projected.scale}px Arial`;
+                ctx.fillStyle = '#FFFFFF';
+                ctx.textAlign = 'center';
+                
+                // 获取行星的索引
+                const planetIndex = planets.indexOf(planet);
+                let planetName = planet.name; // 默认使用对象上的name属性
+                
+                // 根据索引获取适当的i18n键
+                if (planetIndex >= 0) {
+                    const planetKeys = ['mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune'];
+                    if (planetIndex < planetKeys.length) {
+                        planetName = getText(planetKeys[planetIndex]);
+                    }
+                }
+                
+                ctx.fillText(planetName, projected.x, projected.y - (planet.radius + 10) * projected.scale);
+                
+                // 绘制卫星
+                if (planet.moons) {
+                    planet.moons.forEach(moon => {
+                        drawMoon(moon, planet, projected);
+                    });
+                }
+            }
+            
+            // 绘制月球
+            function drawMoon(moon, planet, planetProjected) {
+                // 确保角度在有效范围内（预防措施）
+                moon.angle = moon.angle % (2 * Math.PI);
+                planet.angle = planet.angle % (2 * Math.PI);
+                
+                // 计算月球位置（相对于行星）
+                const moonX = planet.distance * Math.cos(planet.angle) + moon.distance * Math.cos(moon.angle);
+                const moonZ = planet.distance * Math.sin(planet.angle) + moon.distance * Math.sin(moon.angle);
+                const moonY = planet.y; // 使用行星的y坐标
+                
+                // 应用3D旋转
+                let rotated = rotateY(moonX, moonY, moonZ, rotationY);
+                rotated = rotateX(rotated.x, rotated.y, rotated.z, rotationX);
+                const projected = project(rotated.x, rotated.y, rotated.z);
+                
+                // 检查投影是否有效
+                if (!isFinite(projected.x) || !isFinite(projected.y) || !isFinite(projected.scale)) {
+                    return; // 跳过这一帧的绘制
+                }
+                
+                // 绘制月球
+                ctx.beginPath();
+                ctx.arc(projected.x, projected.y, moon.radius * projected.scale, 0, Math.PI * 2);
+                
+                // 月球渐变效果 - 添加安全检查
+                try {
+                    // 确保所有参数都是有限数值
+                    const gradientX1 = isFinite(projected.x - moon.radius/2 * projected.scale) ? 
+                        projected.x - moon.radius/2 * projected.scale : projected.x;
+                    const gradientY1 = isFinite(projected.y - moon.radius/2 * projected.scale) ? 
+                        projected.y - moon.radius/2 * projected.scale : projected.y;
+                    const gradientR1 = isFinite(1 * projected.scale) ? 
+                        1 * projected.scale : 1;
+                    const gradientX2 = isFinite(projected.x) ? projected.x : 0;
+                    const gradientY2 = isFinite(projected.y) ? projected.y : 0;
+                    const gradientR2 = isFinite(moon.radius * projected.scale) ? 
+                        moon.radius * projected.scale : moon.radius;
+                    
+                    // 只有在所有参数有效时才创建渐变
+                    if (isFinite(gradientX1) && isFinite(gradientY1) && isFinite(gradientR1) &&
+                        isFinite(gradientX2) && isFinite(gradientY2) && isFinite(gradientR2)) {
+                const gradient = ctx.createRadialGradient(
+                            gradientX1, gradientY1, gradientR1,
+                            gradientX2, gradientY2, gradientR2
+                );
+                gradient.addColorStop(0, moon.color);
+                gradient.addColorStop(1, darkenColor(moon.color, 40));
+                ctx.fillStyle = gradient;
+                    } else {
+                        // 如果有无效参数，使用纯色填充
+                        ctx.fillStyle = moon.color;
+                    }
+                } catch (e) {
+                    // 如果创建渐变出错，回退到纯色
+                    console.warn('月球渐变创建错误:', e);
+                    ctx.fillStyle = moon.color;
+                }
+                
+                ctx.fill();
+                
+                // 添加月球名称显示，支持多语言
+                if (moon.radius * projected.scale > 2) { // 只在月球足够大时显示名称
+                    ctx.font = `${8 * projected.scale}px Arial`;
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(getText('moon'), projected.x, projected.y - (moon.radius + 8) * projected.scale);
+                }
+            }
+            
+            // 工具函数：加深颜色
+            function darkenColor(color, percent) {
+                let r = parseInt(color.substring(1, 3), 16);
+                let g = parseInt(color.substring(3, 5), 16);
+                let b = parseInt(color.substring(5, 7), 16);
+                
+                r = Math.max(0, Math.floor(r * (100 - percent) / 100));
+                g = Math.max(0, Math.floor(g * (100 - percent) / 100));
+                b = Math.max(0, Math.floor(b * (100 - percent) / 100));
+                
+                return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+            }
+            
+            // 测量实际帧率
+            function measureFPS(timestamp) {
+                if (!lastFPSTime) {
+                    lastFPSTime = timestamp;
+                    frameCount = 0;
+                    return;
+                }
+                
+                frameCount++;
+                
+                // 每隔一段时间更新FPS
+                if (timestamp - lastFPSTime >= fpsUpdateInterval) {
+                    fps = Math.round(1000 * frameCount / (timestamp - lastFPSTime));
+                    frameCount = 0;
+                    lastFPSTime = timestamp;
+                    
+                    // 更新速度以适应实际帧率
+                    updateSpeed();
+                }
+            }
+            
+            // 更新速度函数
+            function updateSpeed() {
+                const days = parseFloat(daysInput.value) || 1;
+                const seconds = parseFloat(secondsInput.value) || 1;
+                daysPerSecond = days / seconds;
+                
+                // 简单直接的计算方式
+                // 一个完整的地球公转是0.01 * 2π = 0.0628弧度
+                // 我们需要在指定的秒数内走完days/EARTH_ORBIT_DAYS圈
+                // 使用实际测量的帧率而不是硬编码值
+                
+                // 计算指定天数占一年的比例
+                const yearFraction = days / EARTH_ORBIT_DAYS;
+                
+                // 计算每秒需要走多少圈
+                const orbitsPerSecond = yearFraction / seconds;
+                
+                // 基准: 地球速度0.01对应的是多少圈/秒呢？
+                // 0.01弧度每帧，使用实际帧率 = 0.01 * fps 弧度每秒
+                // 一圈是2π弧度，所以是 (0.01 * fps)/(2π) 圈每秒
+                const baseOrbitsPerSecond = 0.01 * fps / (2 * Math.PI);
+                
+                // 计算速度系数 = 期望速度/基准速度
+                speed = orbitsPerSecond / baseOrbitsPerSecond;
+                
+                // 防止速度系数过大导致行星位置计算错误
+                if (!isFinite(speed) || Math.abs(speed) > 1000) {
+                    speed = speed > 0 ? 100 : -100;
+                }
+            }
+            
+            // 时间比例输入事件
+            daysInput.addEventListener('input', updateSpeed);
+            secondsInput.addEventListener('input', updateSpeed);
+            
+            // 预设按钮点击事件
+            presetButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    daysInput.value = btn.dataset.days;
+                    secondsInput.value = btn.dataset.seconds;
+                    updateSpeed();
+                });
+            });
+            
+            // 初始更新速度
+            updateSpeed();
+            
+            // 更新动画
+            function update() {
+                if (!paused) {
+                    // 更新太阳旋转
+                    sun.rotation += sun.rotationSpeed * speed;
+                    sun.rotation %= (2 * Math.PI); // 规范化角度，防止数值过大
+                    
+                    // 更新行星
+                    planets.forEach(planet => {
+                        planet.angle += planet.orbitSpeed * speed;
+                        // 规范化角度，保持在0到2π之间，防止数值过大导致精度问题
+                        planet.angle %= (2 * Math.PI);
+                        
+                        planet.rotation += planet.rotationSpeed * speed;
+                        planet.rotation %= (2 * Math.PI); // 规范化自转角度
+                        
+                        // 更新卫星
+                        if (planet.moons) {
+                            planet.moons.forEach(moon => {
+                                moon.angle += moon.orbitSpeed * speed;
+                                // 规范化月球角度
+                                moon.angle %= (2 * Math.PI);
+                                
+                                moon.rotation += moon.orbitSpeed * 5 * speed;
+                                moon.rotation %= (2 * Math.PI);
+                            });
+                        }
+                    });
+                }
+            }
+            
+            // 绘制场景
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // 绘制星空背景
+                drawStars();
+                
+                // 绘制太阳
+                drawSun();
+                
+                // 绘制行星
+                planets.forEach(planet => {
+                    drawPlanet(planet);
+                });
+            }
+            
+            // 动画循环
+            function animate(timestamp) {
+                // 测量实际帧率
+                measureFPS(timestamp);
+                
+                // 跟踪运行时间，定期重置行星状态
+                if (!paused) {
+                    animationTime += 16.67; // 假设约60fps
+                    
+                    // 每隔一段时间重置行星状态，保持稳定性
+                    if (animationTime > RESET_INTERVAL) {
+                        resetPlanets();
+                        animationTime = 0;
+                    }
+                }
+                
+                update();
+                draw();
+                requestAnimationFrame(animate);
+            }
+            
+            // 重置行星位置和角度函数
+            function resetPlanets() {
+                // 重置所有行星角度，给予随机初始位置
+                planets.forEach(planet => {
+                    planet.angle = Math.random() * Math.PI * 2;
+                    planet.rotation = 0;
+                    
+                    if (planet.moons) {
+                        planet.moons.forEach(moon => {
+                            moon.angle = Math.random() * Math.PI * 2;
+                            moon.rotation = 0;
+                        });
+                    }
+                });
+            }
+            
+            // 事件监听设置
+            pauseBtn.addEventListener('click', () => {
+                paused = !paused;
+                // 更新暂停/继续按钮图标
+                pauseBtn.innerHTML = paused ? '<i class="fas fa-play"></i>' : '<i class="fas fa-pause"></i>';
+                // 更新按钮的辅助功能标签
+                pauseBtn.setAttribute('aria-label', paused ? getText('resume') : getText('pause'));
+            });
+            
+            resetBtn.addEventListener('click', () => {
+                rotationX = Math.PI / 6;
+                rotationY = 0;
+                zoom = 0.8;
+                
+                // 更新按钮的辅助功能标签
+                resetBtn.setAttribute('aria-label', getText('reset'));
+                
+                // 同时重置行星位置
+                resetPlanets();
+            });
+            
+            // 鼠标控制
+            canvas.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const deltaX = e.clientX - lastMouseX;
+                const deltaY = e.clientY - lastMouseY;
+                
+                if (e.buttons === 1) { // 左键拖动
+                    rotationY += deltaX * 0.01;
+                    rotationX += deltaY * 0.01;
+                    rotationX = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotationX));
+                } else if (e.buttons === 2) { // 右键拖动
+                    centerX += deltaX;
+                    centerY += deltaY;
+                }
+                
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            });
+            
+            canvas.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+            
+            canvas.addEventListener('mouseleave', () => {
+                isDragging = false;
+            });
+            
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                zoom += e.deltaY * -0.001;
+                zoom = Math.max(0.3, Math.min(2, zoom));
+            });
+            
+            // 添加触摸事件支持
+            let lastTouchX, lastTouchY;
+            let lastPinchDist = 0;
+            let touchStartTime = 0;
+            let touchMoved = false;
+            
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                touchStartTime = Date.now();
+                touchMoved = false;
+                
+                if (e.touches.length === 1) {
+                    isDragging = true;
+                    lastTouchX = e.touches[0].clientX;
+                    lastTouchY = e.touches[0].clientY;
+                } else if (e.touches.length === 2) {
+                    // 记录双指触摸的初始距离（用于缩放）
+                    lastPinchDist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                }
+            });
+            
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                touchMoved = true; // 标记已经移动，用于区分点击和拖动
+                
+                if (e.touches.length === 1 && isDragging) {
+                    // 单指拖动 - 旋转视图
+                    const touchX = e.touches[0].clientX;
+                    const touchY = e.touches[0].clientY;
+                    
+                    const deltaX = touchX - lastTouchX;
+                    const deltaY = touchY - lastTouchY;
+                    
+                    rotationY += deltaX * 0.01;
+                    rotationX += deltaY * 0.01;
+                    rotationX = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotationX));
+                    
+                    lastTouchX = touchX;
+                    lastTouchY = touchY;
+                } else if (e.touches.length === 2) {
+                    // 双指触摸 - 缩放
+                    const currentDist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    
+                    if (lastPinchDist > 0) {
+                        // 计算缩放比例变化
+                        const delta = currentDist - lastPinchDist;
+                        zoom += delta * 0.005;
+                        zoom = Math.max(0.3, Math.min(2, zoom));
+                    }
+                    
+                    lastPinchDist = currentDist;
+                }
+            });
+            
+            canvas.addEventListener('touchend', (e) => {
+                // 检测是否是简单点击而不是拖动
+                const touchEndTime = Date.now();
+                const touchDuration = touchEndTime - touchStartTime;
+                
+                // 如果触摸时间短且没有明显移动，视为点击
+                if (touchDuration < 300 && !touchMoved && e.changedTouches.length > 0) {
+                    const touch = e.changedTouches[0];
+                    const rect = canvas.getBoundingClientRect();
+                    clickedX = touch.clientX - rect.left;
+                    clickedY = touch.clientY - rect.top;
+                    
+                    // 如果当前有显示的提示框，先隐藏
+                    if (planetTooltip.style.display === 'block') {
+                        hideTooltip();
+                    } else {
+                        // 检查是否点击到了行星
+                        checkPlanetClick();
+                    }
+                }
+                
+                if (e.touches.length === 0) {
+                    isDragging = false;
+                    lastPinchDist = 0;
+                } else if (e.touches.length === 1) {
+                    lastTouchX = e.touches[0].clientX;
+                    lastTouchY = e.touches[0].clientY;
+                    lastPinchDist = 0;
+                }
+            });
+            
+            canvas.addEventListener('touchcancel', () => {
+                isDragging = false;
+                lastPinchDist = 0;
+            });
+            
+            // 防止右键菜单
+            canvas.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
+            
+            // 初始化并启动
+            window.addEventListener('resize', resizeCanvas);
+            
+            // 文档加载后执行
+            resizeCanvas();
+            animate();
+            
+            console.log("太阳系模拟初始化完成");
+        });
+    </script>
+    
+    <!-- 额外的页面section示例 -->
+    <section class="extra-section">
+        <div class="container">
+            <h2 data-i18n="exploreTitle">太阳系探索</h2>
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3 data-i18n="structureTitle">太阳系结构</h3>
+                    <p data-i18n="structureText">太阳系由太阳及其周围的天体组成，包括八大行星、矮行星、卫星、小行星、彗星和星际尘埃等。太阳系的直径约为100天文单位（约150亿公里），而最外围的星际空间边界可能延伸至50,000天文单位。</p>
+                </div>
+                <div class="info-card">
+                    <h3 data-i18n="missionTitle">太阳系探测任务</h3>
+                    <p data-i18n="missionText">人类已经发射了许多探测器探索太阳系，包括旅行者1号和2号、好奇号火星车、卡西尼土星探测器等。这些任务大大增进了我们对太阳系各个天体的理解。</p>
+                </div>
+                <div class="info-card">
+                    <h3 data-i18n="formationTitle">行星形成</h3>
+                    <p data-i18n="formationText">太阳系形成于约46亿年前的一团旋转气体和尘埃云。随着物质凝聚，太阳在中心形成，而周围的物质形成了行星、卫星和其他天体。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>
